@@ -336,5 +336,141 @@ function setLang(l){
   setLang(l);
 })();
 </script>
+
+<!-- ===== Demo-Chatbot · self-contained, keine externen Aufrufe ===== -->
+<style>
+  #mdbot,#mdbot *{box-sizing:border-box}
+  #mdbot{position:fixed;right:22px;bottom:22px;z-index:9999;font-family:-apple-system,'SF Pro Text','Segoe UI',Inter,system-ui,sans-serif}
+  #mdbot .launch{position:relative;width:60px;height:60px;border-radius:50%;border:0;cursor:pointer;
+    background:linear-gradient(135deg,#2F6BFF,#0EA5E9);box-shadow:0 10px 26px rgba(47,107,255,.42);
+    display:flex;align-items:center;justify-content:center;transition:transform .15s}
+  #mdbot .launch:hover{transform:translateY(-3px) scale(1.04)}
+  #mdbot .launch svg{width:28px;height:28px;fill:#fff}
+  #mdbot .pulse{position:absolute;inset:0;border-radius:50%;background:rgba(47,107,255,.4);
+    animation:mdpulse 2.6s ease-out infinite;z-index:-1}
+  @keyframes mdpulse{0%{transform:scale(1);opacity:.6}70%{transform:scale(1.9);opacity:0}100%{opacity:0}}
+  #mdbot .panel{position:absolute;right:0;bottom:74px;width:372px;max-width:92vw;height:544px;max-height:76vh;
+    background:#fff;border-radius:20px;overflow:hidden;display:flex;flex-direction:column;
+    box-shadow:0 22px 60px rgba(15,27,45,.28);border:1px solid #E2E7F0;
+    opacity:0;transform:translateY(14px) scale(.98);pointer-events:none;transition:opacity .18s,transform .18s;transform-origin:bottom right}
+  #mdbot.open .panel{opacity:1;transform:none;pointer-events:auto}
+  #mdbot.open .launch{transform:scale(.9)}
+  #mdbot .head{background:linear-gradient(140deg,#14273f,#0b1524);color:#fff;padding:14px 15px;display:flex;align-items:center;gap:11px}
+  #mdbot .head .av{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#2F6BFF,#0EA5E9);display:flex;align-items:center;justify-content:center;flex:0 0 auto;font-size:20px;line-height:1}
+  #mdbot .head .t{font-weight:800;font-size:15px;line-height:1.15}
+  #mdbot .head .s{font-size:11.5px;color:#9fb2cc;display:flex;align-items:center;gap:5px;margin-top:1px}
+  #mdbot .head .s b{color:#1EAE6B;font-size:9px}
+  #mdbot .head .x{margin-left:auto;background:transparent;border:0;color:#9fb2cc;cursor:pointer;font-size:22px;line-height:1;padding:2px 6px}
+  #mdbot .head .x:hover{color:#fff}
+  #mdbot .body{flex:1;overflow-y:auto;padding:16px 14px;background:#F7F9FC;display:flex;flex-direction:column;gap:9px}
+  #mdbot .msg{max-width:83%;padding:10px 13px;border-radius:15px;font-size:14px;line-height:1.5;white-space:pre-line;word-wrap:break-word}
+  #mdbot .msg a{color:#2F6BFF;font-weight:600}
+  #mdbot .bot{align-self:flex-start;background:#fff;border:1px solid #E2E7F0;color:#0F1B2D;border-bottom-left-radius:5px}
+  #mdbot .user{align-self:flex-end;background:#2F6BFF;color:#fff;border-bottom-right-radius:5px}
+  #mdbot .typing{align-self:flex-start;background:#fff;border:1px solid #E2E7F0;border-radius:15px;border-bottom-left-radius:5px;padding:12px 14px;display:flex;gap:4px}
+  #mdbot .typing span{width:7px;height:7px;border-radius:50%;background:#9fb2cc;animation:mdblink 1.2s infinite}
+  #mdbot .typing span:nth-child(2){animation-delay:.2s}#mdbot .typing span:nth-child(3){animation-delay:.4s}
+  @keyframes mdblink{0%,60%,100%{opacity:.3}30%{opacity:1}}
+  #mdbot .chips{display:flex;flex-wrap:wrap;gap:7px;padding:2px 14px 10px;background:#F7F9FC}
+  #mdbot .chip{background:#fff;border:1px solid #cfe0f5;color:#2F6BFF;font-weight:600;font-size:12.5px;
+    padding:7px 12px;border-radius:16px;cursor:pointer;font-family:inherit;transition:background .12s}
+  #mdbot .chip:hover{background:#eef4ff}
+  #mdbot .foot{display:flex;gap:8px;padding:11px 12px 6px;border-top:1px solid #E2E7F0;background:#fff}
+  #mdbot .foot input{flex:1;border:1px solid #E2E7F0;border-radius:11px;padding:10px 12px;font-size:14px;font-family:inherit;outline:none}
+  #mdbot .foot input:focus{border-color:#2F6BFF}
+  #mdbot .foot button{border:0;background:#2F6BFF;color:#fff;border-radius:11px;width:42px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  #mdbot .foot button svg{width:18px;height:18px;fill:#fff}
+  #mdbot .note{font-size:10.5px;color:#94a3b8;text-align:center;padding:5px 12px 9px;background:#fff}
+</style>
+<div id="mdbot" aria-live="polite">
+  <div class="panel" role="dialog" aria-label="Chat">
+    <div class="head">
+      <span class="av">🤖</span>
+      <div>
+        <div class="t" id="cb_t">Mandrudi-Assistent</div>
+        <div class="s"><b>●</b> <span id="cb_s">Live-Demo</span></div>
+      </div>
+      <button class="x" id="cb_x" aria-label="Schließen">×</button>
+    </div>
+    <div class="body" id="cb_body"></div>
+    <div class="chips" id="cb_chips"></div>
+    <div class="foot">
+      <input id="cb_in" autocomplete="off">
+      <button id="cb_send" aria-label="Senden"><svg viewBox="0 0 24 24"><path d="M3 20.5v-6l8-2.5-8-2.5v-6l19 8.5z"/></svg></button>
+    </div>
+    <div class="note" id="cb_note"></div>
+  </div>
+  <button class="launch" id="cb_launch" aria-label="Chat öffnen">
+    <span class="pulse"></span>
+    <svg viewBox="0 0 24 24"><path d="M12 3C6.5 3 2 6.9 2 11.7c0 2.2 1 4.2 2.6 5.7-.1 1.2-.6 2.4-1.4 3.3-.2.2 0 .6.3.5 1.9-.3 3.4-1 4.4-1.7 1 .3 2.1.5 3.2.5 5.5 0 10-3.9 10-8.6S17.5 3 12 3z"/></svg>
+  </button>
+</div>
+<script>
+(function(){
+  var L={
+    de:{title:"Mandrudi-Assistent",sub:"Live-Demo",ph:"Nachricht schreiben …",note:"Beispiel-Chatbot · läuft im Browser · kein Tracking",open:"Chat öffnen",
+      hi:"Hallo! 👋 Ich bin der Demo-Assistent von Mandrudi Digital. Tippen Sie auf einen Vorschlag oder fragen Sie mich etwas.",
+      start:["Was bietet ihr an?","Was kostet das?","Wie schnell geht das?","Baut ihr auch Chatbots?","Kontakt"]},
+    en:{title:"Mandrudi assistant",sub:"Live demo",ph:"Type a message …",note:"Sample chatbot · runs in your browser · no tracking",open:"Open chat",
+      hi:"Hi! 👋 I'm the demo assistant of Mandrudi Digital. Tap a suggestion or ask me anything.",
+      start:["What do you offer?","What does it cost?","How fast is it?","Do you build chatbots?","Contact"]}
+  };
+  var A={
+    de:{
+      leistungen:{a:"Wir bringen produzierende Betriebe digital nach vorn — aus einer Hand:\n• Content & Marketing\n• Vertrieb & Leadgenerierung\n• Automatisierung & KI\n• E-Commerce & Produktdaten\n• IT-Services & Betrieb",c:["Was kostet das?","Wie schnell geht das?","Kontakt"]},
+      preis:{a:"Wir arbeiten mit <b>Festpreisen</b> statt Tagessatz-Poker. Der genaue Preis hängt vom Umfang ab — im kostenlosen Erstgespräch bekommen Sie ein klares Angebot ohne versteckte Kosten.",c:["Kostenloses Erstgespräch","Wie schnell geht das?"]},
+      schnell:{a:"In drei Schritten:\n1) Erstgespräch (30 Min, kostenlos)\n2) Festpreis-Angebot\n3) Umsetzung — oft in Tagen statt Wochen.",c:["Was kostet das?","Kontakt"]},
+      chatbot:{a:"Ja — und dieser Chat ist ein kleines Beispiel dafür 🙂 Für Kunden bauen wir Website- und WhatsApp-Chatbots, die 24/7 Anfragen beantworten und an Ihre FAQ, Ihr CRM und SAP/ERP angebunden werden.",c:["Ist das echte KI?","Kontakt"]},
+      ki:{a:"Ehrlich: Diese Demo ist regelbasiert und läuft komplett in Ihrem Browser — kein Server, kein Tracking. Für echte Kunden-Bots setzen wir KI ein, die frei antwortet und mit Ihren Systemen spricht.",c:["Baut ihr auch Chatbots?","Kontakt"]},
+      kontakt:{a:"Am schnellsten per E-Mail: <a href='mailto:ReachUs@mandrudi.com?subject=Anfrage%20Mandrudi%20Digital'>ReachUs@mandrudi.com</a> — oder buchen Sie ein kostenloses Erstgespräch. Wir antworten innerhalb von 24 Stunden.",c:["Was bietet ihr an?"]},
+      fallback:{a:"Gute Frage! Das klären wir am besten direkt — schreiben Sie uns an <a href='mailto:ReachUs@mandrudi.com'>ReachUs@mandrudi.com</a> oder buchen Sie ein kostenloses Erstgespräch. 😊",c:["Was bietet ihr an?","Kontakt"]}
+    },
+    en:{
+      leistungen:{a:"We move manufacturing companies forward digitally — all from one partner:\n• Content & marketing\n• Sales & lead generation\n• Automation & AI\n• E-commerce & product data\n• IT services & operations",c:["What does it cost?","How fast is it?","Contact"]},
+      preis:{a:"We work with <b>fixed prices</b> — no day-rate poker. The exact price depends on scope; in a free intro call you get a clear quote with no hidden costs.",c:["Free intro call","How fast is it?"]},
+      schnell:{a:"In three steps:\n1) Intro call (30 min, free)\n2) Fixed-price quote\n3) Delivery — often in days rather than weeks.",c:["What does it cost?","Contact"]},
+      chatbot:{a:"Yes — and this chat is a small example 🙂 For clients we build website and WhatsApp chatbots that answer enquiries 24/7 and connect to your FAQ, CRM and SAP/ERP.",c:["Is this real AI?","Contact"]},
+      ki:{a:"Honestly: this demo is rule-based and runs entirely in your browser — no server, no tracking. For real client bots we use AI that answers freely and talks to your systems.",c:["Do you build chatbots?","Contact"]},
+      kontakt:{a:"Fastest by email: <a href='mailto:ReachUs@mandrudi.com?subject=Enquiry%20Mandrudi%20Digital'>ReachUs@mandrudi.com</a> — or book a free intro call. We reply within 24 hours.",c:["What do you offer?"]},
+      fallback:{a:"Good question! Best to clarify directly — email us at <a href='mailto:ReachUs@mandrudi.com'>ReachUs@mandrudi.com</a> or book a free intro call. 😊",c:["What do you offer?","Contact"]}
+    }
+  };
+  var MAP={
+    de:{"Was bietet ihr an?":"leistungen","Was kostet das?":"preis","Wie schnell geht das?":"schnell","Baut ihr auch Chatbots?":"chatbot","Ist das echte KI?":"ki","Kontakt":"kontakt","Kostenloses Erstgespräch":"kontakt"},
+    en:{"What do you offer?":"leistungen","What does it cost?":"preis","How fast is it?":"schnell","Do you build chatbots?":"chatbot","Is this real AI?":"ki","Contact":"kontakt","Free intro call":"kontakt"}
+  };
+  function lang(){return (document.documentElement.lang||'de').slice(0,2).toLowerCase()==='de'?'de':'en';}
+  var root=document.getElementById('mdbot');
+  var body=document.getElementById('cb_body'),chips=document.getElementById('cb_chips'),inp=document.getElementById('cb_in');
+  var started=false;
+  function scroll(){body.scrollTop=body.scrollHeight;}
+  function bubble(txt,who){var d=document.createElement('div');d.className='msg '+who;d.innerHTML=txt;body.appendChild(d);scroll();return d;}
+  function setChips(arr){chips.innerHTML='';(arr||[]).forEach(function(t){var b=document.createElement('button');b.className='chip';b.textContent=t;b.onclick=function(){handle(t);};chips.appendChild(b);});}
+  function typing(){var d=document.createElement('div');d.className='typing';d.innerHTML='<span></span><span></span><span></span>';body.appendChild(d);scroll();return d;}
+  function match(text){var l=lang();var m=MAP[l][text];if(m)return m;var s=text.toLowerCase();
+    if(/(preis|kost|teuer|budget|euro|€|price|cost|cheap)/.test(s))return'preis';
+    if(/(schnell|dauer|zeit|wann|lange|fast|quick|how long|\btime\b)/.test(s))return'schnell';
+    if(/(chatbot|\bbot\b|whatsapp|assistent|assistant)/.test(s))return'chatbot';
+    if(/(\bki\b|\bai\b|künstlich|intellig|\becht\b|\breal\b|gpt)/.test(s))return'ki';
+    if(/(kontakt|mail|erreich|termin|gespräch|contact|reach|\bcall\b|email|anfrage)/.test(s))return'kontakt';
+    if(/(bietet|angebot|leistung|service|macht ihr|was macht|offer|do you|services|\bhelp\b)/.test(s))return'leistungen';
+    if(/(hallo|^hi\b|hey|guten|servus|moin|hello)/.test(s))return'hi';
+    return null;}
+  function handle(text){bubble(text,'user');setChips([]);var l=lang();var key=match(text);var t=typing();
+    setTimeout(function(){t.remove();
+      if(key==='hi'){bubble(L[l].hi,'bot');setChips(L[l].start);return;}
+      var e=(A[l][key])||A[l].fallback;bubble(e.a,'bot');setChips(e.c);},470+Math.random()*260);}
+  function start(){if(started)return;started=true;body.innerHTML='';var l=lang();bubble(L[l].hi,'bot');setChips(L[l].start);}
+  function render(){var l=lang();document.getElementById('cb_t').textContent=L[l].title;document.getElementById('cb_s').textContent=L[l].sub;document.getElementById('cb_note').textContent=L[l].note;inp.placeholder=L[l].ph;document.getElementById('cb_launch').setAttribute('aria-label',L[l].open);}
+  function openBox(){root.classList.add('open');render();start();setTimeout(function(){try{inp.focus();}catch(e){}},200);}
+  function closeBox(){root.classList.remove('open');}
+  document.getElementById('cb_launch').onclick=function(){root.classList.contains('open')?closeBox():openBox();};
+  document.getElementById('cb_x').onclick=closeBox;
+  document.getElementById('cb_send').onclick=function(){var v=inp.value.trim();if(!v)return;inp.value='';handle(v);};
+  inp.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();document.getElementById('cb_send').click();}});
+  if(window.setLang){var _sl=window.setLang;window.setLang=function(x){_sl(x);render();if(root.classList.contains('open')){started=false;start();}};}
+  render();
+})();
+</script>
 </body>
 </html>
